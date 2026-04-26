@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
@@ -9,6 +8,9 @@ import 'screens/alarms_screen.dart';
 import 'screens/timer_screen.dart';
 import 'screens/stopwatch_screen.dart';
 import 'utils/app_theme.dart';
+import 'services/notification_service.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +20,9 @@ void main() async {
 
   // Inicializar el administrador de alarmas nativo
   await AndroidAlarmManager.initialize();
+  
+  // Inicializar servicios
+  await NotificationService.initialize();
   
   // Inicializar el servicio en primer plano
   _initForegroundTask();
@@ -33,6 +38,7 @@ void _initForegroundTask() {
       channelDescription: 'Se usa para mostrar la alarma cuando suena en segundo plano.',
       channelImportance: NotificationChannelImportance.MAX,
       priority: NotificationPriority.MAX,
+      visibility: NotificationVisibility.VISIBILITY_PUBLIC,
     ),
     iosNotificationOptions: const IOSNotificationOptions(
       showNotification: true,
@@ -55,6 +61,7 @@ class AlarmApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => AlarmProvider()..loadAlarms(),
       child: MaterialApp(
+        navigatorKey: navigatorKey,
         title: 'Reloj & Alarma',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
@@ -89,8 +96,6 @@ class _HomeScreenState extends State<HomeScreen> {
     'Cronómetro',
   ];
 
-  late Timer _refreshTimer;
-
   @override
   void initState() {
     super.initState();
@@ -98,17 +103,6 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AlarmProvider>().requestPermissions();
     });
-
-    // Refrescar el estado del servicio cada segundo para actualizar el botón de detener
-    _refreshTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _refreshTimer.cancel();
-    super.dispose();
   }
 
   @override
@@ -121,13 +115,12 @@ class _HomeScreenState extends State<HomeScreen> {
         index: _currentIndex,
         children: _screens,
       ),
-      floatingActionButton: FutureBuilder<bool>(
-        future: FlutterForegroundTask.isRunningService,
-        builder: (context, snapshot) {
-          if (snapshot.data == true) {
+      floatingActionButton: Consumer<AlarmProvider>(
+        builder: (context, provider, _) {
+          if (provider.isAlarmActive) {
             return FloatingActionButton.extended(
               heroTag: null, // Evita conflicto de Hero tags
-              onPressed: () => context.read<AlarmProvider>().stopActiveAlarm(),
+              onPressed: () => provider.stopActiveAlarm(),
               backgroundColor: Colors.red,
               icon: const Icon(Icons.alarm_off, color: Colors.white),
               label: const Text('DETENER ALARMA', style: TextStyle(color: Colors.white)),

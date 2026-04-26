@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import '../models/alarm_model.dart';
 import 'background_alarm_handler.dart';
+import 'notification_service.dart';
 
 class AlarmSchedulerService {
   /// Identificador base para las alarmas.
@@ -79,25 +80,33 @@ void alarmCallback(int id) async {
   WidgetsFlutterBinding.ensureInitialized();
   print('[AlarmScheduler] ¡Alarma disparada! ID: $id');
 
+  // Inicializar notificaciones para este isolate
+  await NotificationService.initialize();
+  await NotificationService.showFullScreenNotification(
+    id,
+    '⏰ ¡ALERTA DE ALARMA!',
+    'Toca para abrir la aplicación',
+  );
+
   // Iniciar el servicio en primer plano
   if (!await FlutterForegroundTask.isRunningService) {
     print('[AlarmScheduler] Iniciando servicio en primer plano...');
     await FlutterForegroundTask.startService(
       notificationTitle: '¡Alarma Activa!',
-      notificationText: 'Toca o usa comandos de voz para detener',
+      notificationText: 'La alarma está sonando...',
       notificationButtons: [
         const NotificationButton(id: 'stop_alarm', text: 'DETENER'),
       ],
       callback: startForegroundTaskCallback,
     );
-    // Intentar abrir la app automáticamente
+    
+    // Pequeño delay para asegurar que el servicio inició antes de lanzar la app
+    await Future.delayed(const Duration(milliseconds: 500));
+    FlutterForegroundTask.wakeUpScreen();
     FlutterForegroundTask.launchApp();
   } else {
     print('[AlarmScheduler] El servicio ya está corriendo. Actualizando...');
-    await FlutterForegroundTask.updateService(
-      notificationTitle: '¡Alarma Activa!',
-      notificationText: 'Toca o usa comandos de voz para detener',
-    );
+    FlutterForegroundTask.wakeUpScreen();
     FlutterForegroundTask.launchApp();
   }
 }

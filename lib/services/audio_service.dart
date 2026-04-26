@@ -1,55 +1,64 @@
 import 'package:audioplayers/audioplayers.dart';
-import 'dart:developer' as dev;
 
-/// Servicio para reproducir el sonido de alarma.
+/// Servicio encargado de la reproducción de sonidos de alarma (Singleton).
 class AudioService {
-  final AudioPlayer _player = AudioPlayer();
+  static final AudioService _instance = AudioService._internal();
+  factory AudioService() => _instance;
+  AudioService._internal() {
+    _initAudio();
+  }
+
+  final AudioPlayer _audioPlayer = AudioPlayer();
   bool _isPlaying = false;
 
   bool get isPlaying => _isPlaying;
 
-  /// Reproduce el sonido de alarma.
+  void _initAudio() {
+    AudioLogger.logLevel = AudioLogLevel.error;
+    _audioPlayer.setReleaseMode(ReleaseMode.loop);
+  }
+
+  /// Reproduce el sonido de la alarma.
   Future<void> playAlarm() async {
     if (_isPlaying) return;
+
     try {
-      // Configurar el contexto de audio para alarmas (CRITICAL para Android/Samsung)
-      final audioContext = AudioContext(
+      // Configuramos el audio para que "conviva" con otros sonidos (como el micro)
+      await AudioPlayer.global.setAudioContext(AudioContext(
         android: AudioContextAndroid(
-          usageType: AndroidUsageType.alarm,
           contentType: AndroidContentType.music,
-          audioFocus: AndroidAudioFocus.gainTransientMayDuck,
+          usageType: AndroidUsageType.media, // Usar media para evitar bloqueos del sistema de alarma
+          audioFocus: AndroidAudioFocus.none, // MUY IMPORTANTE: No solicitar foco exclusivo
         ),
         iOS: AudioContextIOS(
-          category: AVAudioSessionCategory.playback,
+          category: AVAudioSessionCategory.playAndRecord, // Permitir ambos
           options: {
             AVAudioSessionOptions.mixWithOthers,
             AVAudioSessionOptions.defaultToSpeaker,
           },
         ),
-      );
-      
-      await AudioPlayer.global.setAudioContext(audioContext);
-      
-      await _player.setReleaseMode(ReleaseMode.loop);
-      await _player.play(AssetSource('sounds/alarm_sound.mp3'));
+      ));
+
+      print('[AudioService] 🔊 Reproduciendo en modo convivencia...');
+      await _audioPlayer.play(AssetSource('sounds/alarm_sound.mp3'));
       _isPlaying = true;
     } catch (e) {
-      dev.log('Error al reproducir audio: $e');
+      print('[AudioService] Error al reproducir: $e');
     }
   }
 
-  /// Detiene el sonido de alarma.
+  /// Detiene el sonido de la alarma.
   Future<void> stopAlarm() async {
+    if (!_isPlaying) return;
+
     try {
-      await _player.stop();
+      print('[AudioService] 🛑 Deteniendo audio...');
+      await _audioPlayer.stop();
       _isPlaying = false;
     } catch (e) {
-      // Ignorar
+      print('[AudioService] Error al detener: $e');
     }
   }
 
-  /// Libera recursos.
-  void dispose() {
-    _player.dispose();
-  }
+  void dispose() {}
 }

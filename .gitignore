@@ -39,6 +39,7 @@ android/key.properties
 Thumbs.db
 .history
 .svn/
+test_results*.txt
 
 # ----------------------------------------------------------------------------
 # Símbolos y Obfuscación

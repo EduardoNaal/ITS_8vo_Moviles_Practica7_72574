@@ -35,7 +35,11 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
     _daysOfWeek = widget.alarm?.daysOfWeek != null
         ? List.from(widget.alarm!.daysOfWeek)
         : List.filled(7, false);
-    _voiceCommand = widget.alarm?.voiceCommand ?? 'detener';
+    
+    // Usar la frase maestra del provider si es una alarma nueva
+    final defaultCommand = Provider.of<AlarmProvider>(context, listen: false).defaultVoiceCommand;
+    _voiceCommand = widget.alarm?.voiceCommand ?? defaultCommand;
+    
     _labelController = TextEditingController(text: _label);
     _voiceController = TextEditingController(text: _voiceCommand);
   }

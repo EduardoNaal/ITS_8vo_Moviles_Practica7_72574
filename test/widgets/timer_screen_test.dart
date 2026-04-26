@@ -9,9 +9,9 @@ void main() {
     // Verify initial state
     expect(find.text('Iniciar'), findsOneWidget);
     
-    // The button is initially disabled because hours, minutes, and seconds are 0.
+    // The button is always enabled, but shows a SnackBar if time is 0.
     final startButton = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
-    expect(startButton.onPressed, isNull);
+    expect(startButton.onPressed, isNotNull);
 
     // Scroll the minutes wheel by dragging it up
     // In our UI, there are three ListWheelScrollViews

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:alarm_app/providers/alarm_provider.dart';
 import 'package:alarm_app/models/alarm_model.dart';
@@ -9,6 +10,14 @@ void main() {
 
   group('Pruebas de Integración - Almacenamiento y Provider (PI-01 a PI-04)', () {
     setUp(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('xyz.luan/audioplayers.global'),
+        (MethodCall methodCall) async => 1,
+      );
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('dev.fluttercommunity.plus/android_alarm_manager'),
+        (MethodCall methodCall) async => true,
+      );
       SharedPreferences.setMockInitialValues({});
     });
 

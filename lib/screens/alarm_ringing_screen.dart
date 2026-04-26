@@ -1,7 +1,9 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:vibration/vibration.dart';
+import 'package:provider/provider.dart';
 import '../models/alarm_model.dart';
+import '../providers/alarm_provider.dart';
 import '../services/audio_service.dart';
 import '../services/speech_service.dart';
 import '../utils/app_theme.dart';
@@ -92,64 +94,76 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
 
     setState(() => _isCancelled = true);
 
-    await _audioService.stopAlarm();
-    await _speechService.stopListening();
+    // Detener TODO inmediatamente (Audio, Micro, Vibración, Notificación)
+    _speechService.stopListening();
+    Provider.of<AlarmProvider>(context, listen: false).stopActiveAlarm();
     Vibration.cancel();
 
     if (mounted) {
-      // Mostrar feedback
-      await showDialog(
+      // Mostrar feedback después de haber silenciado todo
+      showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: AppTheme.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                byVoice ? Icons.mic : Icons.alarm_off,
-                color: AppTheme.accent,
-                size: 56,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                byVoice
-                    ? '¡Alarma cancelada por voz!'
-                    : 'Alarma cancelada',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
+        builder: (ctx) {
+          // Timer para cerrar el diálogo automáticamente en 5 segundos
+          Future.delayed(const Duration(seconds: 5), () {
+            if (Navigator.of(ctx).canPop()) {
+              Navigator.of(ctx).pop();
+            }
+          });
+
+          return AlertDialog(
+            backgroundColor: AppTheme.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  byVoice ? Icons.mic : Icons.alarm_off,
+                  color: AppTheme.accent,
+                  size: 56,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              if (byVoice) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
                 Text(
-                  'Comando: "${widget.alarm.voiceCommand}"',
+                  byVoice
+                      ? '¡Alarma cancelada por voz!'
+                      : 'Alarma cancelada',
+                  textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.accent,
-                    fontStyle: FontStyle.italic,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
                   ),
                 ),
+                if (byVoice) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Comando: "${widget.alarm.voiceCommand}"',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.accent,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
               ],
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                Navigator.pop(context);
-              },
-              child: const Text('OK'),
             ),
-          ],
-        ),
-      );
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      ).then((_) {
+        // Al cerrarse el diálogo (ya sea por OK o por el Timer), cerramos la pantalla de alarma
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      });
     }
   }
 
@@ -174,32 +188,40 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: Column(
-          children: [
-            const Spacer(flex: 2),
-            // Hora de la alarma
-            _buildAlarmTime(),
-            if (widget.alarm.label.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                widget.alarm.label,
-                style: const TextStyle(
-                  fontSize: 18,
-                  color: AppTheme.textSecondary,
+        child: SizedBox(
+          width: double.infinity, // Forzar ancho total para centrado real
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center, // Centrado horizontal
+            children: [
+              const Spacer(flex: 2),
+              // Hora de la alarma
+              _buildAlarmTime(),
+              if (widget.alarm.label.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Text(
+                    widget.alarm.label,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
                 ),
-              ),
+              ],
+              const Spacer(),
+              // Indicador de voz
+              _buildVoiceIndicator(),
+              const Spacer(),
+              // Texto reconocido
+              if (_recognizedText.isNotEmpty) _buildRecognizedText(),
+              const SizedBox(height: 16),
+              // Botón manual de cancelar
+              _buildCancelButton(),
+              const SizedBox(height: 40),
             ],
-            const Spacer(),
-            // Indicador de voz
-            _buildVoiceIndicator(),
-            const Spacer(),
-            // Texto reconocido
-            if (_recognizedText.isNotEmpty) _buildRecognizedText(),
-            const SizedBox(height: 16),
-            // Botón manual de cancelar
-            _buildCancelButton(),
-            const SizedBox(height: 40),
-          ],
+          ),
         ),
       ),
     );
@@ -212,6 +234,7 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
         scale: _pulseAnimation.value,
         child: Text(
           widget.alarm.timeString,
+          textAlign: TextAlign.center,
           style: const TextStyle(
             fontSize: 72,
             fontWeight: FontWeight.w200,

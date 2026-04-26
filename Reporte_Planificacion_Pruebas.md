@@ -88,8 +88,15 @@ Las pruebas unitarias verifican el correcto funcionamiento de **unidades individ
 | PU-47 | Frases en español | `voice_matching_test.dart` | `"ya desperté"`, `"cállate"`, `"silencio"` |
 | PU-48 | STT con puntuación | `voice_matching_test.dart` | `"detener."` = `"detener"` |
 
-**Total pruebas unitarias identificadas: 48**  
-**Implementadas y ejecutadas: 57** (incluyendo sub-assertions)
+#### D) Servicios Core (`AudioService` y `SpeechService`) [NUEVO]
+
+| ID | Prueba | Archivo | Descripción |
+|----|--------|---------|-------------|
+| PU-49 | AudioService Singleton | `audio_service_test.dart` | Verifica que múltiples instancias apunten al mismo objeto en memoria para prevenir audios duplicados |
+| PU-50 | Watchdog Timer Reactivación | `speech_service_test.dart` | Verifica que el timer de 2 segundos de escucha force la reactivación si el OS duerme el proceso |
+
+**Total pruebas unitarias identificadas: 50**  
+**Implementadas y ejecutadas: 59** (incluyendo sub-assertions)
 
 ---
 
@@ -133,7 +140,9 @@ Las pruebas de integración verifican la **interacción correcta entre dos o má
 | PI-13 | Alarma solo Lun-Vie no suena en sábado | `_checkAlarms` + `AlarmModel.daysOfWeek` | Alarma configurada L-V → no se dispara en fin de semana |
 | PI-14 | Alarma "Una vez" suena cualquier día | `_checkAlarms` + `AlarmModel` | Sin días seleccionados → suena el día actual |
 
-**Total pruebas de integración identificadas: 14**
+| PI-15 | Sincronización Frase Maestra | `StorageService` + `AlarmProvider` + `AlarmModel` | Cambio de defaultVoiceCommand se guarda, recarga y aplica a nuevas alarmas |
+
+**Total pruebas de integración identificadas: 15**
 
 ---
 

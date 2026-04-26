@@ -29,10 +29,12 @@ class AlarmsScreen extends StatelessWidget {
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return Center(
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          _buildMasterPhraseCard(context, Provider.of<AlarmProvider>(context, listen: false)),
+          const Spacer(),
           Icon(
             Icons.alarm_off_rounded,
             size: 80,
@@ -55,24 +57,106 @@ class AlarmsScreen extends StatelessWidget {
               color: AppTheme.textDim.withAlpha(150),
             ),
           ),
+          const Spacer(flex: 2),
         ],
       ),
     );
   }
 
   Widget _buildAlarmList(BuildContext context, AlarmProvider provider) {
-    return ListView.builder(
+    return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-      itemCount: provider.alarms.length,
-      itemBuilder: (context, index) {
-        final alarm = provider.alarms[index];
-        return _AlarmTile(
-          alarm: alarm,
-          onToggle: () => provider.toggleAlarm(alarm.id),
-          onTap: () => _openAlarmEditor(context, alarm: alarm),
-          onDismissed: () => provider.deleteAlarm(alarm.id),
-        );
-      },
+      children: [
+        _buildMasterPhraseCard(context, provider),
+        const SizedBox(height: 20),
+        ...provider.alarms.map((alarm) => _AlarmTile(
+              alarm: alarm,
+              onToggle: () => provider.toggleAlarm(alarm.id),
+              onTap: () => _openAlarmEditor(context, alarm: alarm),
+              onDismissed: () => provider.deleteAlarm(alarm.id),
+            )),
+      ],
+    );
+  }
+
+  Widget _buildMasterPhraseCard(BuildContext context, AlarmProvider provider) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.accent.withAlpha(15),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.accent.withAlpha(40)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.auto_fix_high, color: AppTheme.accent, size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Frase Maestra (Global)',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.accent,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Las nuevas alarmas usarán: "${provider.defaultVoiceCommand}"',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () => _showMasterPhraseDialog(context, provider),
+                child: const Text('Cambiar'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMasterPhraseDialog(BuildContext context, AlarmProvider provider) {
+    final controller = TextEditingController(text: provider.defaultVoiceCommand);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: const Text('Ajustar Frase Maestra'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Ej: detener, ya desperté...',
+            helperText: 'Se aplicará a todas las alarmas nuevas.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (controller.text.isNotEmpty) {
+                provider.updateDefaultVoiceCommand(controller.text);
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
     );
   }
 

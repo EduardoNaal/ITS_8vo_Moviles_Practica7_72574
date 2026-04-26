@@ -57,6 +57,9 @@ class BackgroundAlarmHandler extends TaskHandler {
         Vibration.vibrate(duration: 1000);
       });
 
+      // Intentar abrir la app desde el handler también para mayor seguridad
+      FlutterForegroundTask.launchApp();
+
     } catch (e, stack) {
       print('[ForegroundTask] ERROR en onStart: $e');
       print('[ForegroundTask] STACKTRACE: $stack');
