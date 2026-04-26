@@ -27,8 +27,10 @@ class AlarmProvider extends ChangeNotifier {
   String get defaultVoiceCommand => _defaultVoiceCommand;
   bool get isAlarmActive => _isAlarmActive;
 
+  Future<void>? initialization;
+
   AlarmProvider() {
-    _init();
+    initialization = _init();
   }
 
   Future<void> _init() async {

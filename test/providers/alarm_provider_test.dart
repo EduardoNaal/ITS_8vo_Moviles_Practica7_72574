@@ -1,29 +1,22 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:alarm_app/providers/alarm_provider.dart';
 import 'package:alarm_app/models/alarm_model.dart';
+import '../test_utils.dart';
 
 void main() {
   // Inicializar el binding de Flutter para usar SharedPreferences en tests
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
-      const MethodChannel('xyz.luan/audioplayers.global'),
-      (MethodCall methodCall) async => 1,
-    );
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
-      const MethodChannel('dev.fluttercommunity.plus/android_alarm_manager'),
-      (MethodCall methodCall) async => true,
-    );
-    // Simular SharedPreferences vacías antes de cada test
+    setupTestMocks();
     SharedPreferences.setMockInitialValues({});
   });
 
   group('AlarmProvider - Estado inicial', () {
-    test('inicia con lista de alarmas vacía', () {
+    test('inicia con lista de alarmas vacía', () async {
       final provider = AlarmProvider();
+      await provider.initialization;
       expect(provider.alarms, isEmpty);
     });
   });
@@ -31,9 +24,10 @@ void main() {
   group('AlarmProvider - Operaciones CRUD', () {
     late AlarmProvider provider;
 
-    setUp(() {
+    setUp(() async {
       SharedPreferences.setMockInitialValues({});
       provider = AlarmProvider();
+      await provider.initialization;
     });
 
     test('addAlarm agrega una alarma a la lista', () async {
@@ -124,6 +118,7 @@ void main() {
 
     test('addAlarm notifica a los listeners', () async {
       final provider = AlarmProvider();
+      await provider.initialization;
       int notifyCount = 0;
       provider.addListener(() => notifyCount++);
 
@@ -133,6 +128,7 @@ void main() {
 
     test('deleteAlarm notifica a los listeners', () async {
       final provider = AlarmProvider();
+      await provider.initialization;
       await provider.addAlarm(AlarmModel(id: '1', hour: 7, minute: 0));
 
       int notifyCount = 0;
@@ -144,6 +140,7 @@ void main() {
 
     test('toggleAlarm notifica a los listeners', () async {
       final provider = AlarmProvider();
+      await provider.initialization;
       await provider.addAlarm(AlarmModel(id: '1', hour: 7, minute: 0));
 
       int notifyCount = 0;
@@ -155,6 +152,7 @@ void main() {
 
     test('updateAlarm notifica a los listeners', () async {
       final provider = AlarmProvider();
+      await provider.initialization;
       final alarm = AlarmModel(id: '1', hour: 7, minute: 0);
       await provider.addAlarm(alarm);
 
@@ -173,6 +171,7 @@ void main() {
 
     test('CRUD completo: add → update → toggle → delete', () async {
       final provider = AlarmProvider();
+      await provider.initialization;
 
       // Add
       await provider.addAlarm(
@@ -197,6 +196,7 @@ void main() {
 
     test('múltiples alarmas se mantienen independientes', () async {
       final provider = AlarmProvider();
+      await provider.initialization;
       await provider.addAlarm(
         AlarmModel(id: 'a', hour: 6, minute: 0, label: 'Primera'),
       );
